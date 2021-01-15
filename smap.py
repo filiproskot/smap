@@ -6,11 +6,23 @@ from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropou
 from tensorflow.keras.callbacks import ModelCheckpoint
 import cv2
 import numpy as np
+import matplotlib.pyplot as plt
 
 global IMG_HEIGHT
 IMG_HEIGHT = 150
 global IMG_WIDTH
 IMG_WIDTH = 150
+
+global acc
+acc = 0
+global val_acc
+val_acc = 0
+global loss
+loss = 0
+global val_loss
+val_loss = 0
+
+
 
 print('Number of testing images with mask: ', len(r'C:\Users\filip\PycharmProjects\Test\school\smap\data\with_mask'))
 print('Number of testing images without mask:', len(r'C:\Users\filip\PycharmProjects\Test\school\smap\data\without_mask'))
@@ -64,6 +76,35 @@ def trainModel():
     checkpoint = ModelCheckpoint('model-{epoch:03d}.model', monitor='val_loss', verbose=0, save_best_only=True,
                                  mode='auto')
 
+    history = model.fit_generator(train_generator,
+                                  epochs=epochs,
+                                  validation_data=validation_generator,
+                                  callbacks=[checkpoint])
+    global acc
+    acc = history.history['accuracy']
+    global val_acc
+    val_acc = history.history['val_accuracy']
+    global loss
+    loss = history.history['loss']
+    global val_loss
+    val_loss = history.history['val_loss']
+
+
+def plot():
+    epochs_range = range(epochs)
+    plt.figure(figsize=(6, 6))
+    plt.subplot(1, 2, 1)
+    plt.plot(epochs_range, acc, label='Training Accuracy')
+    plt.plot(epochs_range, val_acc, label='Validation Accuracy')
+    plt.legend(loc='lower right')
+    plt.title('Training and Validation Accuracy')
+
+    plt.subplot(1, 2, 2)
+    plt.plot(epochs_range, loss, label='Training Loss')
+    plt.plot(epochs_range, val_loss, label='Validation Loss')
+    plt.legend(loc='upper right')
+    plt.title('Training and Validation Loss')
+    plt.show()
 
 model = tf.keras.models.Sequential([
     Conv2D(32, 3, activation='relu', input_shape=(IMG_WIDTH, IMG_HEIGHT, 3)),
@@ -83,6 +124,7 @@ model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy']
 trainTestSplit('data/with_mask', 'data/train/training_with_mask', 'data/test/test_with_mask', 0.75)
 trainTestSplit('data/without_mask', 'data/train/training_without_mask', 'data/test/test_without_mask', 0.75)
 trainModel()
+plot()
 
 labels_dict = {0: 'no mask', 1: 'mask'}
 color_dict = {0: (0, 0, 255), 1: (0, 255, 0)}
