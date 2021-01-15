@@ -4,6 +4,8 @@ from shutil import copyfile
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
 from tensorflow.keras.callbacks import ModelCheckpoint
+import cv2
+import numpy as np
 
 global IMG_HEIGHT
 IMG_HEIGHT = 150
@@ -81,3 +83,40 @@ model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy']
 trainTestSplit('data/with_mask', 'data/train/training_with_mask', 'data/test/test_with_mask', 0.75)
 trainTestSplit('data/without_mask', 'data/train/training_without_mask', 'data/test/test_without_mask', 0.75)
 trainModel()
+
+labels_dict = {0: 'no mask', 1: 'mask'}
+color_dict = {0: (0, 0, 255), 1: (0, 255, 0)}
+
+size = 4
+webcam = cv2.VideoCapture(0)
+classifier = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+
+while True:
+    rval, im = webcam.read()
+    im = cv2.flip(im, 1, 1)
+
+    mini = cv2.resize(im, (im.shape[1] // size, im.shape[0] // size))
+    faces = classifier.detectMultiScale(mini)
+
+    for (x, y, w, h) in faces:
+        face_img = im[y:(y + h) * size, x:(x + w) * size]
+        resized = cv2.resize(face_img, (IMG_WIDTH, IMG_HEIGHT))
+        normalized = resized / 255.0
+        reshaped = np.reshape(normalized, (1, IMG_WIDTH, IMG_HEIGHT, 3))
+        reshaped = np.vstack([reshaped])
+        result = model.predict(reshaped)
+
+        label = np.argmax(result, axis=1)[0]
+
+        cv2.rectangle(im, (x * size, y * size), ((x + w) * size, (y + h) * size), color_dict[label], 2)
+        cv2.rectangle(im, (x * size, (y * size) - 40), ((x + w) * size, y * size), color_dict[label], -1)
+        cv2.putText(im, labels_dict[label], (x * size + 10, (y * size) - 10), cv2.FONT_HERSHEY_DUPLEX, 0.8,
+                    (255, 255, 255), 2)
+
+    cv2.imshow('Test', im)
+    key = cv2.waitKey(10)
+    if key == 27:
+        break
+
+webcam.release()
+cv2.destroyAllWindows()
