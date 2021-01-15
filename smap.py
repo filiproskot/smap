@@ -1,6 +1,5 @@
 import os
 import tensorflow as tf
-import random
 from shutil import copyfile
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
@@ -16,19 +15,19 @@ print('Number of testing images without mask:', len(r'C:\Users\filip\PycharmProj
 
 epochs = int(input('How many epochs?\n')) #default 30
 
+
 def trainTestSplit(source, trainPath, testPath, split_size):
     dataset = []
+
     for crnImage in os.listdir(source):
         data = source + '/' + crnImage
         if (os.path.getsize(data) > 0):
             dataset.append(crnImage)
     train_len = int(len(dataset) * split_size)
-    test_len = int(len(dataset) - train_len)
-    shuffled = random.sample(dataset, len(dataset))
     train = dataset[0:train_len]
     test = dataset[train_len:len(dataset)]
-    print("train images with mask:", len(train))
-    print("test images without mask:", len(test))
+    print('Train images with mask:', len(train))
+    print('Test images without mask:', len(test))
 
     for trainDataPoint in train:
         crnTrainDataPath = source + '/' + trainDataPoint
@@ -42,7 +41,7 @@ def trainTestSplit(source, trainPath, testPath, split_size):
 
 
 def trainModel():
-    training_dir = "data/train"
+    training_dir = 'data/train'
     train_datagen = ImageDataGenerator(rescale=1.0 / 255,
                                        rotation_range=40,
                                        width_shift_range=0.2,
@@ -69,12 +68,16 @@ model = tf.keras.models.Sequential([
     MaxPooling2D(2, 2),
     Conv2D(64, 3, activation='relu'),
     MaxPooling2D(2, 2),
+    Conv2D(128, 3, padding='same', activation='relu'),
+    MaxPooling2D(2, 2),
     Flatten(),
-    Dropout(0.5),
+    Dropout(0.5), #0.3
     Dense(256, activation='relu'),
     Dense(2, activation='softmax')
 ])
+
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+
 trainTestSplit('data/with_mask', 'data/train/training_with_mask', 'data/test/test_with_mask', 0.75)
 trainTestSplit('data/without_mask', 'data/train/training_without_mask', 'data/test/test_without_mask', 0.75)
 trainModel()
